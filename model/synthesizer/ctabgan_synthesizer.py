@@ -348,7 +348,7 @@ class CTABGANSynthesizer:
                  batch_size=500,
                  epochs=150):
                  
-        self.private = False
+        self.private = True # False
         self.micro_batch_size = batch_size
 
         # clip_coeff and sigma are the hyper-parameters for injecting noise in gradients
@@ -366,7 +366,10 @@ class CTABGANSynthesizer:
         self.l2scale = l2scale
         self.batch_size = batch_size
         self.epochs = epochs
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        self.device = torch.device("cpu") # to avoid error in line 452: c_perm = c[perm]
+        
 
     def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, general=[], non_categorical=[], type={}):
 
@@ -477,11 +480,11 @@ class CTABGANSynthesizer:
                             for name, param in discriminator.named_parameters():
                                 clipped_grads[name] += param.grad
                             discriminator.zero_grad()
-
+                        # import pdb; pdb.set_trace()
                         for name, param in discriminator.named_parameters():
-                            param.grad = (clipped_grads[name] + torch.FloatTensor(
-                                clipped_grads[name].size()).normal_(0, self.sigma * self.clip_coeff).cuda()) / (
-                                                     d_real.size(0) / self.micro_batch_size)
+                            param.grad = (clipped_grads[name] + torch.FloatTensor(clipped_grads[name].size()).normal_(0, self.sigma * self.clip_coeff).to(self.device)) / (d_real.size(0) / self.micro_batch_size)
+                                # clipped_grads[name].size()).normal_(0, self.sigma * self.clip_coeff).cuda()) / (
+                                #                      d_real.size(0) / self.micro_batch_size)
 
                         steps += 1
                 
@@ -578,12 +581,14 @@ class CTABGANSynthesizer:
             # NOTE: uncomment following block if you want to calculate privacy budget (epsilon). Be careful, the calculation takes time, you don't want to 
             # calculate it each epoch.
              
-            # if self.private:
-            #     max_lmbd = 4095
-            #     lmbds = range(2, max_lmbd + 1)
-            #     rdp = compute_rdp(self.micro_batch_size / train_data.shape[0], self.sigma, steps, lmbds)
-            #     epsilon, _, _ = get_privacy_spent(lmbds, rdp, target_delta=1e-5)
-            #     print("Epoch :", epoch, "Epsilon spent : ", epsilon)
+            if self.private:
+                max_lmbd = 4095
+                lmbds = range(2, max_lmbd + 1)
+                rdp = compute_rdp(self.micro_batch_size / train_data.shape[0], self.sigma, steps, lmbds)
+                # epsilon, _, _ = get_privacy_spent(lmbds, rdp, target_delta=1e-5)
+                # print("Epoch :", epoch, "Epsilon spent : ", epsilon)
+                eps, delta, _ = get_privacy_spent(lmbds, rdp, target_eps=5)
+                print("Epoch :", epoch, f'Delta spent (at fixed Epsilon={eps}): ', delta)
             
    
     def sample(self, n):
