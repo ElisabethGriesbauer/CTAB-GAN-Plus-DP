@@ -345,10 +345,9 @@ class CTABGANSynthesizer:
                  random_dim=100,
                  num_channels=64,
                  l2scale=1e-5,
-                 batch_size=500,
+                 batch_size=50, # 500,
                  epochs=150):
                  
-        self.private = True # False
         self.micro_batch_size = batch_size
 
         # clip_coeff and sigma are the hyper-parameters for injecting noise in gradients
@@ -371,8 +370,9 @@ class CTABGANSynthesizer:
         self.device = torch.device("cpu") # to avoid error in line 452: c_perm = c[perm]
         
 
-    def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, general=[], non_categorical=[], type={}):
+    def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, general=[], non_categorical=[], type={}, private=False):
 
+        self.private=private
         problem_type = None
         target_index=None
         if type:
@@ -584,11 +584,15 @@ class CTABGANSynthesizer:
             if self.private:
                 max_lmbd = 4095
                 lmbds = range(2, max_lmbd + 1)
+                # import pdb; pdb.set_trace()
                 rdp = compute_rdp(self.micro_batch_size / train_data.shape[0], self.sigma, steps, lmbds)
-                # epsilon, _, _ = get_privacy_spent(lmbds, rdp, target_delta=1e-5)
-                # print("Epoch :", epoch, "Epsilon spent : ", epsilon)
-                eps, delta, _ = get_privacy_spent(lmbds, rdp, target_eps=5)
-                print("Epoch :", epoch, f'Delta spent (at fixed Epsilon={eps}): ', delta)
+                epsilon, _, _ = get_privacy_spent(lmbds, rdp, target_delta=1e-5)
+                print("Epoch :", epoch, "Epsilon spent : ", epsilon)
+                # eps, delta, _ = get_privacy_spent(lmbds, rdp, target_eps=5)
+                # print("Epoch :", epoch, f'Delta spent (at fixed Epsilon={eps}): ', delta)
+            
+            if epsilon > 5:
+                print(f'Should stop at epoch {epoch} due to DP budget!')
             
    
     def sample(self, n):
