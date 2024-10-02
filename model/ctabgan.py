@@ -14,6 +14,8 @@ warnings.filterwarnings("ignore")
 class CTABGAN():
 
     def __init__(self,
+                 batch_size=100,
+                 private=False,
                  raw_csv_path = "Real_Datasets/Adult.csv",
                  test_ratio = 0.20,
                  categorical_columns = [ 'workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race', 'gender', 'native-country', 'income'], 
@@ -25,8 +27,8 @@ class CTABGAN():
                  problem_type= {"Classification": "income"}):
 
         self.__name__ = 'CTABGAN'
-              
-        self.synthesizer = CTABGANSynthesizer()
+        
+        self.synthesizer = CTABGANSynthesizer(batch_size=batch_size)
         self.raw_df = pd.read_csv(raw_csv_path)
         self.test_ratio = test_ratio
         self.categorical_columns = categorical_columns
@@ -36,20 +38,21 @@ class CTABGAN():
         self.non_categorical_columns = non_categorical_columns
         self.integer_columns = integer_columns
         self.problem_type = problem_type
+        self.private=private
                 
     def fit(self):
         
         start_time = time.time()
         self.data_prep = DataPrep(self.raw_df,self.categorical_columns,self.log_columns,self.mixed_columns,self.general_columns,self.non_categorical_columns,self.integer_columns,self.problem_type,self.test_ratio)
         self.synthesizer.fit(train_data=self.data_prep.df, categorical = self.data_prep.column_types["categorical"], mixed = self.data_prep.column_types["mixed"],
-        general = self.data_prep.column_types["general"], non_categorical = self.data_prep.column_types["non_categorical"], type=self.problem_type)
+        general = self.data_prep.column_types["general"], non_categorical = self.data_prep.column_types["non_categorical"], type=self.problem_type, private=self.private)
         end_time = time.time()
         print('Finished training in',end_time-start_time," seconds.")
 
 
-    def generate_samples(self):
+    def generate_samples(self, nsmaples):
         
-        sample = self.synthesizer.sample(len(self.raw_df)) 
+        sample = self.synthesizer.sample(n=nsamples) 
         sample_df = self.data_prep.inverse_prep(sample)
         
         return sample_df
