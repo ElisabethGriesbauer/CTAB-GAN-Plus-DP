@@ -365,9 +365,9 @@ class CTABGANSynthesizer:
         self.l2scale = l2scale
         self.batch_size = batch_size
         self.epochs = epochs
-        # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-        self.device = torch.device("cpu") # to avoid error in line 452: c_perm = c[perm]
+        # self.device = torch.device("cpu") # to avoid error in line 452: c_perm = c[perm]
         
 
     def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, general=[], non_categorical=[], type={}, private=False):
