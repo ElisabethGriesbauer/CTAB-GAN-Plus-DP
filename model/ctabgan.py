@@ -16,7 +16,12 @@ class CTABGAN():
     def __init__(self,
                  batch_size=100,
                  private=False,
-                 raw_csv_path = "Real_Datasets/Adult.csv",
+                 class_dim=(256, 256, 256, 256),
+                 random_dim=100,
+                 num_channels=64,
+                 l2scale=1e-5,
+                 epochs=150,
+                #  raw_csv_path = "Real_Datasets/Adult.csv",
                  test_ratio = 0.20,
                  categorical_columns = [ 'workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race', 'gender', 'native-country', 'income'], 
                  log_columns = [],
@@ -28,8 +33,15 @@ class CTABGAN():
 
         self.__name__ = 'CTABGAN'
         
-        self.synthesizer = CTABGANSynthesizer(batch_size=batch_size)
-        self.raw_df = pd.read_csv(raw_csv_path)
+        self.batch_size = batch_size
+        self.private = private
+        self.class_dim = class_dim
+        self.random_dim = random_dim
+        self.num_channels = num_channels
+        self.l2scale = l2scale
+        self.epochs = epochs
+        
+        # self.raw_df = pd.read_csv(raw_csv_path)
         self.test_ratio = test_ratio
         self.categorical_columns = categorical_columns
         self.log_columns = log_columns
@@ -38,14 +50,20 @@ class CTABGAN():
         self.non_categorical_columns = non_categorical_columns
         self.integer_columns = integer_columns
         self.problem_type = problem_type
-        self.private=private
-                
-    def fit(self):
+
+        self.synthesizer = CTABGANSynthesizer(class_dim=self.class_dim, random_dim=self.random_dim, num_channels=self.num_channels, l2scale=self.l2scale, batch_size=self.batch_size, epochs=self.epochs)
         
+                
+    def fit(self, data):
+        
+        self.raw_df = data
         start_time = time.time()
+
         self.data_prep = DataPrep(self.raw_df,self.categorical_columns,self.log_columns,self.mixed_columns,self.general_columns,self.non_categorical_columns,self.integer_columns,self.problem_type,self.test_ratio)
-        self.synthesizer.fit(train_data=self.data_prep.df, categorical = self.data_prep.column_types["categorical"], mixed = self.data_prep.column_types["mixed"],
-        general = self.data_prep.column_types["general"], non_categorical = self.data_prep.column_types["non_categorical"], type=self.problem_type, private=self.private)
+
+        self.synthesizer.fit(train_data=self.data_prep.df, categorical = self.data_prep.column_types["categorical"], mixed = self.data_prep.column_types["mixed"], 
+                                general = self.data_prep.column_types["general"], non_categorical = self.data_prep.column_types["non_categorical"], type=self.problem_type, private=self.private)
+
         end_time = time.time()
         print('Finished training in',end_time-start_time," seconds.")
 
